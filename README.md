@@ -6,7 +6,7 @@ An Obsidian plugin that integrates your notes with [Vibe Kanban](https://github.
 
 ## Example
 
-https://github.com/user-attachments/assets/0876181f-65de-41b5-bc31-e38d96f18c34
+https://github.com/user-attachments/assets/2402c653-ef39-4ba5-b572-4b6f9dd31b5f
 
 ## Features
 
