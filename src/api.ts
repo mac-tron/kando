@@ -127,8 +127,8 @@ export class VKApiClient {
 		);
 	}
 
-	async getTask(taskId: string): Promise<VKTask> {
-		return this.request<VKTask>('GET', `/api/tasks/${encodeURIComponent(taskId)}`);
+	async getTask(taskId: string): Promise<VKTaskWithAttemptStatus> {
+		return this.request<VKTaskWithAttemptStatus>('GET', `/api/tasks/${encodeURIComponent(taskId)}`);
 	}
 
 	async createTask(payload: CreateTaskPayload): Promise<VKTask> {

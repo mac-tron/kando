@@ -22,6 +22,7 @@ export class FrontmatterManager {
 			vk_project_id: frontmatter.vk_project_id,
 			vk_task_id: frontmatter.vk_task_id,
 			vk_status: frontmatter.vk_status,
+			vk_executing: frontmatter.vk_executing,
 			vk_last_synced: frontmatter.vk_last_synced,
 			vk_attempt_id: frontmatter.vk_attempt_id,
 			vk_branch: frontmatter.vk_branch,
@@ -124,7 +125,8 @@ export class FrontmatterManager {
 		file: TFile,
 		status: VKTaskStatus,
 		attemptId?: string,
-		branch?: string
+		branch?: string,
+		executing?: boolean
 	): Promise<void> {
 		const updates: Partial<VKFrontmatter> = {
 			vk_status: status,
@@ -137,6 +139,10 @@ export class FrontmatterManager {
 
 		if (branch) {
 			updates.vk_branch = branch;
+		}
+
+		if (executing !== undefined) {
+			updates.vk_executing = executing;
 		}
 
 		await this.update(file, updates);

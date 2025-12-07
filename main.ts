@@ -1055,7 +1055,8 @@ export default class VibeKanbanPlugin extends Plugin {
 						file,
 						'inprogress',
 						attempt.id,
-						attempt.branch
+						attempt.branch,
+						true // executing
 					);
 					await this.updateStatusBar(file);
 
@@ -1117,7 +1118,8 @@ export default class VibeKanbanPlugin extends Plugin {
 				targetFile,
 				task.status,
 				latestAttempt?.id,
-				latestAttempt?.branch
+				latestAttempt?.branch,
+				task.has_in_progress_attempt
 			);
 			await this.updateStatusBar(targetFile);
 
@@ -1144,7 +1146,8 @@ export default class VibeKanbanPlugin extends Plugin {
 						targetFile,
 						refreshedTask.status,
 						latestAttempt?.id,
-						latestAttempt?.branch
+						latestAttempt?.branch,
+						refreshedTask.has_in_progress_attempt
 					);
 					await this.updateStatusBar(targetFile);
 
