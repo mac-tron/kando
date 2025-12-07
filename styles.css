@@ -1,0 +1,572 @@
+/* KanDo Plugin Styles */
+
+/* Status Bar */
+.vk-status-bar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	cursor: pointer;
+}
+
+.vk-status-bar-icon {
+	display: flex;
+	align-items: center;
+}
+
+.vk-status-bar-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* Toolbar button visibility */
+.vk-hidden {
+	display: none !important;
+}
+
+.vk-disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.vk-executing {
+	animation: vk-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes vk-pulse {
+	0%, 100% { opacity: 0.4; }
+	50% { opacity: 0.8; }
+}
+
+/* Vibe Kanban View Container */
+.vk-view-container {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.vk-webview {
+	flex: 1;
+	width: 100%;
+	height: 100%;
+	border: none;
+}
+
+.vk-loading,
+.vk-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--text-muted);
+	font-size: 14px;
+}
+
+.vk-error {
+	flex-direction: column;
+	gap: 8px;
+	color: var(--text-error);
+}
+
+.vk-error-hint {
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+/* Security Warning for untrusted URLs */
+.vk-security-warning {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 32px;
+	text-align: center;
+	max-width: 500px;
+	margin: 0 auto;
+}
+
+.vk-security-warning h3 {
+	color: var(--text-warning);
+	margin-bottom: 16px;
+}
+
+.vk-security-warning p {
+	color: var(--text-normal);
+	margin-bottom: 12px;
+	line-height: 1.5;
+}
+
+.vk-security-warning .vk-warning-hint {
+	color: var(--text-muted);
+	font-size: 13px;
+	font-style: italic;
+}
+
+.vk-warning-buttons {
+	display: flex;
+	gap: 12px;
+	margin-top: 24px;
+}
+
+.vk-warning-buttons button {
+	padding: 8px 16px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.vk-warning-buttons button.mod-warning {
+	background-color: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+:root {
+	--vk-card-bg: #1e1e1e;
+	--vk-card-border: #333;
+	--vk-input-bg: #2b2b2b;
+	--vk-input-border: #444;
+	--vk-accent-purple: #7c4dff;
+	--vk-accent-green: #2e7d32;
+	--vk-text-muted: #888;
+}
+
+.theme-light {
+	--vk-card-bg: #ffffff;
+	--vk-card-border: #e0e0e0;
+	--vk-input-bg: #f5f5f5;
+	--vk-input-border: #ddd;
+}
+
+/* Settings Container */
+.vk-settings {
+	padding: 16px 24px 16px 16px;
+	max-width: 800px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Main Header */
+.vk-main-title {
+	font-size: 1.5em;
+	font-weight: 700;
+	margin-bottom: 4px;
+	color: var(--text-normal);
+}
+
+.vk-tagline {
+	font-size: 0.85em;
+	color: var(--vk-text-muted);
+	margin: 0 0 16px 0;
+	font-weight: 400;
+}
+
+/* Card Layout */
+.vk-card {
+	background-color: var(--vk-card-bg);
+	border: 1px solid var(--vk-card-border);
+	border-radius: 10px;
+	padding: 16px;
+	margin-bottom: 16px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.vk-card-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 16px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--vk-card-border);
+}
+
+.vk-card-title {
+	font-size: 1.05em;
+	font-weight: 600;
+	color: var(--text-normal);
+	margin: 0;
+}
+
+.vk-card-icon {
+	color: var(--text-muted);
+}
+
+/* Grid Layout */
+.vk-settings-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px;
+}
+
+.vk-settings-column {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.vk-column-header {
+	font-size: 0.95em;
+	font-weight: 600;
+	color: var(--text-normal);
+	margin-bottom: 8px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Input Groups */
+.vk-input-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.vk-input-label {
+	font-size: 0.85em;
+	font-weight: 500;
+	color: var(--text-normal);
+	line-height: 1.4;
+}
+
+.vk-input-description {
+	font-size: 0.75em;
+	color: var(--vk-text-muted);
+	margin-bottom: 2px;
+	line-height: 1.4;
+	overflow: visible;
+	white-space: normal;
+	word-wrap: break-word;
+}
+
+/* Using .vk-settings scope to increase specificity without !important where possible */
+.vk-settings .vk-text-input,
+.vk-settings .vk-dropdown {
+	width: 100%;
+	padding: 8px 10px;
+	line-height: 1.3;
+	height: 34px;
+	min-height: 34px;
+	max-height: 34px;
+	background-color: var(--vk-input-bg);
+	border: 1px solid var(--vk-input-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	font-size: 13px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-weight: 400;
+	transition: border-color 0.2s ease;
+	box-sizing: border-box;
+	vertical-align: middle;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+
+/* Fallback for inputs outside .vk-settings scope (e.g., URL input before settings wrapper) */
+.vk-text-input,
+.vk-dropdown {
+	width: 100%;
+	padding: 8px 10px;
+	line-height: 1.3;
+	height: 34px;
+	min-height: 34px;
+	max-height: 34px;
+	background-color: var(--vk-input-bg);
+	border: 1px solid var(--vk-input-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	font-size: 13px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-weight: 400;
+	transition: border-color 0.2s ease;
+	box-sizing: border-box;
+	vertical-align: middle;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+
+.vk-text-input:focus,
+.vk-dropdown:focus {
+	border-color: var(--vk-accent-purple);
+	outline: none;
+}
+
+/* Placeholder styling */
+.vk-text-input::placeholder {
+	color: var(--text-faint, #666);
+	opacity: 0.6;
+}
+
+.vk-text-input::-webkit-input-placeholder {
+	color: var(--text-faint, #666);
+	opacity: 0.6;
+}
+
+.vk-text-input::-moz-placeholder {
+	color: var(--text-faint, #666);
+	opacity: 0.6;
+}
+
+/* Dropdown arrow - scoped for specificity */
+.vk-settings .vk-dropdown,
+.vk-dropdown {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 10px center;
+	padding-right: 28px;
+}
+
+.vk-dropdown option {
+	padding: 8px 12px;
+	background-color: var(--vk-input-bg);
+	color: var(--text-normal);
+}
+
+/* Folder Input */
+.vk-folder-input-wrapper {
+	display: flex;
+	align-items: center;
+	background-color: var(--vk-input-bg);
+	border: 1px solid var(--vk-input-border);
+	border-radius: 6px;
+	overflow: visible;
+	height: 34px;
+}
+
+.vk-folder-input-wrapper .vk-text-input,
+.vk-folder-input-wrapper .vk-dropdown {
+	border: none;
+	background: transparent;
+	flex: 1;
+	height: 32px;
+	min-height: 32px;
+	max-height: 32px;
+	padding: 8px 10px;
+}
+
+.vk-folder-button {
+	background: transparent;
+	border: none;
+	padding: 0 12px 0 0;
+	color: var(--text-muted);
+	opacity: 0.5;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 32px;
+}
+
+.vk-folder-button svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* Connection UI */
+.vk-url-input-wrapper {
+	position: relative;
+}
+
+.vk-url-input-wrapper .vk-text-input {
+	padding-right: 32px !important;
+}
+
+.vk-status-icon-input {
+	position: absolute;
+	right: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+}
+
+.vk-status-icon-input.connected {
+	color: var(--vk-accent-green);
+}
+
+.vk-status-icon-input.disconnected {
+	color: var(--color-red);
+}
+
+.vk-status-icon-input.loading {
+	color: var(--text-muted);
+	animation: vk-spin 1s linear infinite;
+}
+
+@keyframes vk-spin {
+	from { transform: translateY(-50%) rotate(0deg); }
+	to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Modal Styles */
+.vk-create-story-modal {
+	padding: 16px;
+}
+
+.vk-create-story-modal h2 {
+	margin: 0 0 16px 0;
+	font-size: 1.4em;
+	font-weight: 600;
+}
+
+.vk-create-story-modal .setting-item {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	border-top: none;
+	padding: 8px 0;
+}
+
+.vk-create-story-modal .setting-item-info {
+	padding-right: 0;
+}
+
+.vk-create-story-modal .setting-item-name {
+	font-size: 0.9em;
+	font-weight: 500;
+}
+
+.vk-create-story-modal .setting-item-description {
+	font-size: 0.8em;
+	color: var(--text-muted);
+}
+
+.vk-create-story-modal .setting-item-control {
+	width: 100%;
+	justify-content: flex-start;
+}
+
+.vk-create-story-modal .setting-item-control input[type="text"],
+.vk-create-story-modal .setting-item-control select,
+.vk-create-story-modal .setting-item-control .dropdown {
+	width: 100%;
+}
+
+.vk-create-story-modal .vk-textarea-container {
+	width: 100%;
+	margin-bottom: 16px;
+}
+
+.vk-create-story-modal .vk-description-textarea {
+	width: 100%;
+	min-height: 120px;
+	resize: vertical;
+}
+
+.vk-create-story-modal .modal-button-container {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 8px;
+	padding-top: 16px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Toggles */
+.vk-toggle-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 4px 0;
+}
+
+.vk-toggle-switch {
+	position: relative;
+	width: 36px;
+	height: 20px;
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.vk-toggle-input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.vk-toggle-slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: var(--vk-input-border);
+	transition: .3s;
+	border-radius: 20px;
+}
+
+.vk-toggle-slider:before {
+	position: absolute;
+	content: "";
+	height: 14px;
+	width: 14px;
+	left: 3px;
+	bottom: 3px;
+	background-color: white;
+	transition: .3s;
+	border-radius: 50%;
+}
+
+.vk-toggle-input:checked+.vk-toggle-slider {
+	background-color: var(--vk-accent-purple);
+}
+
+.vk-toggle-input:checked+.vk-toggle-slider:before {
+	transform: translateX(16px);
+}
+
+.vk-toggle-content {
+	flex: 1;
+	padding-top: 0;
+}
+
+.vk-toggle-label {
+	font-size: 0.85em;
+	font-weight: 500;
+	color: var(--text-normal);
+	margin-bottom: 2px;
+	line-height: 1.4;
+}
+
+.vk-toggle-desc {
+	font-size: 0.75em;
+	color: var(--vk-text-muted);
+	line-height: 1.4;
+	overflow: visible;
+	white-space: normal;
+	word-wrap: break-word;
+}
+
+/* Ensure text is never clipped - scoped to settings for specificity */
+.vk-settings .vk-toggle-label,
+.vk-settings .vk-toggle-desc,
+.vk-settings .vk-input-description,
+.vk-settings .vk-input-label {
+	overflow: visible;
+	text-overflow: clip;
+	white-space: normal;
+}
+
+/* Defensive overflow rules for inner containers only */
+.vk-card,
+.vk-settings-grid,
+.vk-settings-column,
+.vk-input-group,
+.vk-toggle-item,
+.vk-toggle-content {
+	overflow: visible;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+	.vk-settings-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.vk-connection-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}

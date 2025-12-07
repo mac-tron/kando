@@ -1,0 +1,21 @@
+# Build output (main.js is included for releases)
+
+# npm
+node_modules/
+package-lock.json
+
+# Plugin data (contains user settings)
+data.json
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
