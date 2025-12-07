@@ -221,9 +221,9 @@ export class VKSettingTab extends PluginSettingTab {
 				{ value: '', label: 'Select a folder' },
 				...folders.map((f) => ({ value: f, label: f })),
 			],
-			value: this.plugin.settings.storiesFolder,
+			value: this.plugin.settings.cardsFolder,
 			onChange: async (value) => {
-				this.plugin.settings.storiesFolder = value;
+				this.plugin.settings.cardsFolder = value;
 				await this.plugin.saveSettings();
 			},
 		});
@@ -244,7 +244,7 @@ export class VKSettingTab extends PluginSettingTab {
 
 		this.createToggleSetting(syncRightCol, {
 			label: 'Auto-sync status',
-			description: 'Sync story status via WebSocket in real-time',
+			description: 'Sync card status via polling in real-time',
 			value: this.plugin.settings.autoSyncStatus,
 			onChange: async (value) => {
 				this.plugin.settings.autoSyncStatus = value;

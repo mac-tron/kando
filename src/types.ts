@@ -95,7 +95,7 @@ export interface VKPluginSettings {
 	defaultExecutor: string;
 	defaultVariant: string;
 	defaultBranch: string;
-	storiesFolder: string;
+	cardsFolder: string;
 	autoPushOnSave: boolean;
 	showStatusBar: boolean;
 	autoSyncStatus: boolean;
@@ -109,7 +109,7 @@ export const DEFAULT_SETTINGS: VKPluginSettings = {
 	defaultExecutor: 'CLAUDE_CODE',
 	defaultVariant: 'DEFAULT',
 	defaultBranch: 'main',
-	storiesFolder: 'Stories',
+	cardsFolder: 'Cards',
 	autoPushOnSave: false,
 	showStatusBar: true,
 	autoSyncStatus: true,

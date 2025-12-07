@@ -28,7 +28,7 @@ import { VKSettingTab } from './src/settings';
 import { PushModal } from './src/modals/PushModal';
 import { ExecuteModal } from './src/modals/ExecuteModal';
 import { StatusModal, StatusRefreshResult } from './src/modals/StatusModal';
-import { CreateStoryModal, CreateStoryResult } from './src/modals/CreateStoryModal';
+import { CreateCardModal, CreateCardResult } from './src/modals/CreateCardModal';
 import { VKStatusPoller } from './src/websocket';
 import { VibeKanbanView, VIBE_KANBAN_VIEW_TYPE } from './src/views/VibeKanbanView';
 
@@ -74,13 +74,13 @@ export default class VibeKanbanPlugin extends Plugin {
 
 		// Register commands
 		this.addCommand({
-			id: 'push-story',
+			id: 'push-card',
 			name: 'Push Feature',
 			checkCallback: (checking: boolean) => {
 				const file = this.getActiveFile();
-				if (file && this.isInStoriesFolder(file)) {
+				if (file && this.isInCardsFolder(file)) {
 					if (!checking) {
-						this.pushStory(file);
+						this.pushCard(file);
 					}
 					return true;
 				}
@@ -89,13 +89,13 @@ export default class VibeKanbanPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'execute-story',
+			id: 'execute-card',
 			name: 'Add and Execute',
 			checkCallback: (checking: boolean) => {
 				const file = this.getActiveFile();
-				if (file && this.isInStoriesFolder(file)) {
+				if (file && this.isInCardsFolder(file)) {
 					if (!checking) {
-						this.executeStory(file);
+						this.executeCard(file);
 					}
 					return true;
 				}
@@ -108,7 +108,7 @@ export default class VibeKanbanPlugin extends Plugin {
 			name: 'Pull Status',
 			checkCallback: (checking: boolean) => {
 				const file = this.getActiveFile();
-				if (file && this.isInStoriesFolder(file)) {
+				if (file && this.isInCardsFolder(file)) {
 					if (!checking) {
 						this.pullStatus(file);
 					}
@@ -123,7 +123,7 @@ export default class VibeKanbanPlugin extends Plugin {
 			name: 'View in Vibe Kanban',
 			checkCallback: (checking: boolean) => {
 				const file = this.getActiveFile();
-				if (file && this.isInStoriesFolder(file)) {
+				if (file && this.isInCardsFolder(file)) {
 					if (!checking) {
 						this.openInVK(file);
 					}
@@ -134,10 +134,10 @@ export default class VibeKanbanPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'create-story',
+			id: 'create-card',
 			name: 'Create New Feature',
 			callback: () => {
-				this.createNewStory();
+				this.createNewCard();
 			},
 		});
 
@@ -172,7 +172,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		// Listen for metadata cache changes to update UI when frontmatter is written
 		this.registerEvent(
 			this.app.metadataCache.on('changed', (file) => {
-				if (file instanceof TFile && this.isInStoriesFolder(file)) {
+				if (file instanceof TFile && this.isInCardsFolder(file)) {
 					this.updateStatusBar(file);
 					this.updateToolbarForFile(file);
 				}
@@ -214,7 +214,7 @@ export default class VibeKanbanPlugin extends Plugin {
 						item.setTitle('New KanDo card')
 							.setIcon('list-plus')
 							.onClick(() => {
-								this.createNewStory(file.path);
+								this.createNewCard(file.path);
 							});
 					});
 				}
@@ -231,11 +231,11 @@ export default class VibeKanbanPlugin extends Plugin {
 				}
 				if (
 					this.settings.autoPushOnSave &&
-					this.isInStoriesFolder(file)
+					this.isInCardsFolder(file)
 				) {
 					const isSynced = await this.frontmatter.isSynced(file);
 					if (isSynced) {
-						await this.pushStoryQuiet(file);
+						await this.pushCardQuiet(file);
 					}
 				}
 			})
@@ -384,7 +384,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		setIcon(button, 'kanban-plus');
 
 		this.registerDomEvent(button, 'click', () => {
-			this.createNewStory();
+			this.createNewCard();
 		});
 
 		navContainer.appendChild(button);
@@ -421,8 +421,8 @@ export default class VibeKanbanPlugin extends Plugin {
 			execute.removeClass('vk-hidden', 'vk-disabled', 'vk-executing');
 			open.removeClass('vk-hidden', 'vk-disabled');
 
-			// Hide all if not in stories folder
-			if (!this.isInStoriesFolder(file)) {
+			// Hide all if not in cards folder
+			if (!this.isInCardsFolder(file)) {
 				add.addClass('vk-hidden');
 				execute.addClass('vk-hidden');
 				open.addClass('vk-hidden');
@@ -465,16 +465,16 @@ export default class VibeKanbanPlugin extends Plugin {
 
 	// Handler for Push to To Do button
 	private async handleAddClick(file: TFile): Promise<void> {
-		if (!this.isInStoriesFolder(file)) {
+		if (!this.isInCardsFolder(file)) {
 			new Notice('Not a card file');
 			return;
 		}
-		await this.pushStory(file);
+		await this.pushCard(file);
 	}
 
 	// Handler for Execute button
 	private async handleExecuteClick(file: TFile): Promise<void> {
-		if (!this.isInStoriesFolder(file)) {
+		if (!this.isInCardsFolder(file)) {
 			new Notice('Not a card file');
 			return;
 		}
@@ -489,18 +489,18 @@ export default class VibeKanbanPlugin extends Plugin {
 
 		if (!isSynced) {
 			// Not synced: push first, then execute
-			await this.pushStoryWithCallback(file, async () => {
-				await this.executeStory(file);
+			await this.pushCardWithCallback(file, async () => {
+				await this.executeCard(file);
 			});
 		} else {
 			// Already synced: just execute
-			await this.executeStory(file);
+			await this.executeCard(file);
 		}
 	}
 
 	// Handler for Open in VK button
 	private async handleOpenClick(file: TFile): Promise<void> {
-		if (!this.isInStoriesFolder(file)) {
+		if (!this.isInCardsFolder(file)) {
 			new Notice('Not a card file');
 			return;
 		}
@@ -689,7 +689,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		const files = this.app.vault.getMarkdownFiles();
 
 		for (const file of files) {
-			if (!this.isInStoriesFolder(file)) {
+			if (!this.isInCardsFolder(file)) {
 				continue;
 			}
 
@@ -722,11 +722,11 @@ export default class VibeKanbanPlugin extends Plugin {
 		return view?.file || null;
 	}
 
-	private isInStoriesFolder(file: TFile): boolean {
-		if (!this.settings.storiesFolder) {
+	private isInCardsFolder(file: TFile): boolean {
+		if (!this.settings.cardsFolder) {
 			return true; // No folder filtering
 		}
-		const folder = this.settings.storiesFolder.replace(/^\/|\/$/g, '');
+		const folder = this.settings.cardsFolder.replace(/^\/|\/$/g, '');
 		if (!folder) {
 			return true; // Empty string after normalization means no filtering
 		}
@@ -742,7 +742,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		const textEl = this.statusBarItem.querySelector('.vk-status-bar-text');
 		if (!textEl) return;
 
-		if (!this.isInStoriesFolder(file)) {
+		if (!this.isInCardsFolder(file)) {
 			textEl.textContent = '—';
 			this.statusBarItem.className = 'vk-status-bar';
 			return;
@@ -793,7 +793,7 @@ export default class VibeKanbanPlugin extends Plugin {
 				.setTitle('New KanDo card')
 				.setIcon('list-plus')
 				.onClick(() => {
-					this.createNewStory();
+					this.createNewCard();
 				})
 		);
 
@@ -810,19 +810,19 @@ export default class VibeKanbanPlugin extends Plugin {
 		menu.showAtMouseEvent(evt);
 	}
 
-	async pushStory(file: TFile): Promise<void> {
-		await this.pushStoryWithCallback(file);
+	async pushCard(file: TFile): Promise<void> {
+		await this.pushCardWithCallback(file);
 	}
 
-	// Push story with optional callback (used for chained push+execute)
-	async pushStoryWithCallback(file: TFile, onComplete?: () => Promise<void>): Promise<void> {
+	// Push card with optional callback (used for chained push+execute)
+	async pushCardWithCallback(file: TFile, onComplete?: () => Promise<void>): Promise<void> {
 		try {
 			const isSynced = await this.frontmatter.isSynced(file);
 			const title = await this.frontmatter.getTitle(file);
 
 			if (isSynced) {
 				// Update existing task
-				await this.pushStoryQuiet(file);
+				await this.pushCardQuiet(file);
 				new Notice('Card updated in Vibe Kanban');
 				// Execute callback separately to isolate errors
 				if (onComplete) {
@@ -932,7 +932,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		}
 	}
 
-	private async pushStoryQuiet(file: TFile): Promise<void> {
+	private async pushCardQuiet(file: TFile): Promise<void> {
 		const fm = await this.frontmatter.read(file);
 		if (!fm.vk_task_id) return;
 
@@ -949,7 +949,7 @@ export default class VibeKanbanPlugin extends Plugin {
 		});
 	}
 
-	async executeStory(file: TFile): Promise<void> {
+	async executeCard(file: TFile): Promise<void> {
 		try {
 			// Read frontmatter once at the start
 			let fm = await this.frontmatter.read(file);
@@ -997,7 +997,7 @@ export default class VibeKanbanPlugin extends Plugin {
 			}
 
 			// Push latest content
-			await this.pushStoryQuiet(file);
+			await this.pushCardQuiet(file);
 
 			const title = await this.frontmatter.getTitle(file);
 
@@ -1081,7 +1081,7 @@ export default class VibeKanbanPlugin extends Plugin {
 			return;
 		}
 
-		if (!this.isInStoriesFolder(targetFile)) {
+		if (!this.isInCardsFolder(targetFile)) {
 			new Notice('Not a card file');
 			return;
 		}
@@ -1230,10 +1230,10 @@ export default class VibeKanbanPlugin extends Plugin {
 	}
 
 	/**
-	 * Create a new story file with native template functionality.
-	 * @param targetFolder Optional folder path to create the story in
+	 * Create a new card file with native template functionality.
+	 * @param targetFolder Optional folder path to create the card in
 	 */
-	async createNewStory(targetFolder?: string): Promise<void> {
+	async createNewCard(targetFolder?: string): Promise<void> {
 		try {
 			// Validate and sanitize targetFolder to prevent path traversal
 			let folder = '';
@@ -1263,18 +1263,18 @@ export default class VibeKanbanPlugin extends Plugin {
 					return;
 				}
 			} else {
-				folder = this.settings.storiesFolder || '';
+				folder = this.settings.cardsFolder || '';
 			}
 
-			// Show create story modal
-			const result = await this.showCreateStoryModal('Untitled');
+			// Show create card modal
+			const result = await this.showCreateCardModal('Untitled');
 			if (!result) return; // User cancelled
 
 			// Generate unique filename
 			const filePath = this.generateUniqueFilePath(folder, result.title);
 
 			// Build file content
-			const content = this.buildStoryContent(result);
+			const content = this.buildCardContent(result);
 
 			// Ensure folder exists
 			if (folder) {
@@ -1331,9 +1331,9 @@ export default class VibeKanbanPlugin extends Plugin {
 	}
 
 	/**
-	 * Build the markdown content for a new story file.
+	 * Build the markdown content for a new card file.
 	 */
-	private buildStoryContent(result: CreateStoryResult): string {
+	private buildCardContent(result: CreateCardResult): string {
 		const frontmatter = `---
 title: ${result.title}
 vk_status: notsynced
@@ -1348,10 +1348,10 @@ vk_project_id: ${result.project.id}
 
 	/**
 	 * Public API for Templater integration.
-	 * Shows a single modal to create a new story with project, title, and description.
+	 * Shows a single modal to create a new card with project, title, and description.
 	 * Returns null if cancelled.
 	 */
-	async showCreateStoryModal(defaultTitle: string = 'Untitled'): Promise<CreateStoryResult | null> {
+	async showCreateCardModal(defaultTitle: string = 'Untitled'): Promise<CreateCardResult | null> {
 		try {
 			const projects = await this.api.getProjects();
 			if (projects.length === 0) {
@@ -1359,7 +1359,7 @@ vk_project_id: ${result.project.id}
 				return null;
 			}
 
-			const modal = new CreateStoryModal(
+			const modal = new CreateCardModal(
 				this.app,
 				projects,
 				this.settings.defaultProjectId,

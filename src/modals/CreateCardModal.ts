@@ -1,20 +1,20 @@
 import { App, Modal, Setting, Notice, TextAreaComponent } from 'obsidian';
 import { VKProject } from '../types';
 
-export interface CreateStoryResult {
+export interface CreateCardResult {
 	project: VKProject;
 	title: string;
 	description: string;
 }
 
-export class CreateStoryModal extends Modal {
+export class CreateCardModal extends Modal {
 	private projects: VKProject[];
 	private defaultProjectId: string;
 	private defaultTitle: string;
 	private selectedProject: VKProject | null;
 	private title: string;
 	private description: string;
-	private resolvePromise: ((result: CreateStoryResult | null) => void) | null = null;
+	private resolvePromise: ((result: CreateCardResult | null) => void) | null = null;
 
 	constructor(
 		app: App,
@@ -44,7 +44,7 @@ export class CreateStoryModal extends Modal {
 		}
 	}
 
-	async openAndWait(): Promise<CreateStoryResult | null> {
+	async openAndWait(): Promise<CreateCardResult | null> {
 		return new Promise((resolve) => {
 			this.resolvePromise = resolve;
 			this.open();
@@ -53,7 +53,7 @@ export class CreateStoryModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
-		contentEl.addClass('vk-create-story-modal');
+		contentEl.addClass('vk-create-card-modal');
 
 		contentEl.createEl('h2', { text: 'New KanDo card' });
 
