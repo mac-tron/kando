@@ -3,7 +3,7 @@
 	"name": "KanDo",
 	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
-	"description": "Think. Plan. Do. Think and plan in Obsidian and execute in Vibe Kanban.",
+	"description": "Think. Plan. Do. Integrate your notes with Vibe Kanban for AI-powered task execution.",
 	"author": "mac-tron",
 	"authorUrl": "https://github.com/mac-tron",
 	"isDesktopOnly": true
