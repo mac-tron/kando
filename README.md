@@ -4,6 +4,10 @@ Think. Plan. Do. Think and plan in Obsidian and execute in Vibe Kanban.
 
 An Obsidian plugin that integrates your notes with [Vibe Kanban](https://github.com/BloopAI/vibe-kanban) for AI-powered task execution.
 
+## Example
+
+https://github.com/user-attachments/assets/0876181f-65de-41b5-bc31-e38d96f18c34
+
 ## Features
 
 - **Push Cards to Vibe Kanban** - Create tasks in Vibe Kanban directly from your Obsidian notes
