@@ -43,7 +43,7 @@ var DEFAULT_SETTINGS = {
   defaultExecutor: "CLAUDE_CODE",
   defaultVariant: "DEFAULT",
   defaultBranch: "main",
-  storiesFolder: "Stories",
+  cardsFolder: "Cards",
   autoPushOnSave: false,
   showStatusBar: true,
   autoSyncStatus: true,
@@ -202,6 +202,7 @@ var FrontmatterManager = class {
       vk_project_id: frontmatter.vk_project_id,
       vk_task_id: frontmatter.vk_task_id,
       vk_status: frontmatter.vk_status,
+      vk_executing: frontmatter.vk_executing,
       vk_last_synced: frontmatter.vk_last_synced,
       vk_attempt_id: frontmatter.vk_attempt_id,
       vk_branch: frontmatter.vk_branch,
@@ -277,7 +278,7 @@ var FrontmatterManager = class {
   /**
    * Update execution status
    */
-  async updateExecutionStatus(file, status, attemptId, branch) {
+  async updateExecutionStatus(file, status, attemptId, branch, executing) {
     const updates = {
       vk_status: status,
       vk_last_synced: new Date().toISOString()
@@ -287,6 +288,9 @@ var FrontmatterManager = class {
     }
     if (branch) {
       updates.vk_branch = branch;
+    }
+    if (executing !== void 0) {
+      updates.vk_executing = executing;
     }
     await this.update(file, updates);
   }
@@ -316,11 +320,18 @@ var VKSettingTab = class extends import_obsidian2.PluginSettingTab {
     const wrapper = containerEl.createDiv({ cls: "vk-settings" });
     wrapper.createEl("h1", { text: "KanDo", cls: "vk-main-title" });
     wrapper.createEl("p", { text: "Think. Plan. Do.", cls: "vk-tagline" });
-    try {
-      await this.loadProjects();
-      await this.loadProfiles();
-    } catch (error) {
-      console.error("[KanDo] Error loading settings data:", error);
+    this.lastConnectionStatus = null;
+    if (this.plugin.settings.vkUrl) {
+      try {
+        await this.loadProjects();
+        await this.loadProfiles();
+        if (this.projects.length > 0) {
+          this.lastConnectionStatus = "connected";
+        }
+      } catch (error) {
+        console.error("[KanDo] Error loading settings data:", error);
+        this.lastConnectionStatus = "disconnected";
+      }
     }
     const folders = this.getFolders();
     let variantDropdownEl = null;
@@ -343,16 +354,6 @@ var VKSettingTab = class extends import_obsidian2.PluginSettingTab {
     } else if (this.lastConnectionStatus === "disconnected") {
       (0, import_obsidian2.setIcon)(statusIcon, "x");
       statusIcon.addClass("disconnected");
-    } else if (this.plugin.settings.vkUrl) {
-      if (!this.projectsLoadFailed && this.projects.length > 0) {
-        (0, import_obsidian2.setIcon)(statusIcon, "check");
-        statusIcon.addClass("connected");
-        this.lastConnectionStatus = "connected";
-      } else if (this.projectsLoadFailed) {
-        (0, import_obsidian2.setIcon)(statusIcon, "x");
-        statusIcon.addClass("disconnected");
-        this.lastConnectionStatus = "disconnected";
-      }
     }
     urlInput.addEventListener("input", async () => {
       this.plugin.settings.vkUrl = urlInput.value;
@@ -454,9 +455,9 @@ var VKSettingTab = class extends import_obsidian2.PluginSettingTab {
         { value: "", label: "Select a folder" },
         ...folders.map((f) => ({ value: f, label: f }))
       ],
-      value: this.plugin.settings.storiesFolder,
+      value: this.plugin.settings.cardsFolder,
       onChange: async (value) => {
-        this.plugin.settings.storiesFolder = value;
+        this.plugin.settings.cardsFolder = value;
         await this.plugin.saveSettings();
       }
     });
@@ -473,7 +474,7 @@ var VKSettingTab = class extends import_obsidian2.PluginSettingTab {
     });
     this.createToggleSetting(syncRightCol, {
       label: "Auto-sync status",
-      description: "Sync story status via WebSocket in real-time",
+      description: "Sync card status via polling in real-time",
       value: this.plugin.settings.autoSyncStatus,
       onChange: async (value) => {
         this.plugin.settings.autoSyncStatus = value;
@@ -1011,9 +1012,9 @@ var StatusModal = class extends import_obsidian5.Modal {
   }
 };
 
-// src/modals/CreateStoryModal.ts
+// src/modals/CreateCardModal.ts
 var import_obsidian6 = require("obsidian");
-var CreateStoryModal = class extends import_obsidian6.Modal {
+var CreateCardModal = class extends import_obsidian6.Modal {
   constructor(app, projects, defaultProjectId, defaultTitle) {
     super(app);
     this.resolvePromise = null;
@@ -1043,7 +1044,7 @@ var CreateStoryModal = class extends import_obsidian6.Modal {
   }
   onOpen() {
     const { contentEl } = this;
-    contentEl.addClass("vk-create-story-modal");
+    contentEl.addClass("vk-create-card-modal");
     contentEl.createEl("h2", { text: "New KanDo card" });
     if (this.projects.length === 0) {
       contentEl.createEl("p", {
@@ -1077,7 +1078,7 @@ var CreateStoryModal = class extends import_obsidian6.Modal {
     new import_obsidian6.Setting(contentEl).setName("Prompt").setDesc("Optional - press Cmd/Ctrl+Enter to submit");
     const textAreaContainer = contentEl.createDiv({ cls: "vk-textarea-container" });
     const textArea = new import_obsidian6.TextAreaComponent(textAreaContainer);
-    textArea.setPlaceholder("Describe the feature here...");
+    textArea.setPlaceholder("Prompt details here...");
     textArea.onChange((value) => {
       this.description = value;
     });
@@ -1148,8 +1149,8 @@ var VKStatusPoller = class {
     this.onTaskUpdate = null;
     this.vkUrl = "";
     this.projectIds = /* @__PURE__ */ new Set();
-    this.lastKnownStatuses = /* @__PURE__ */ new Map();
-    // taskId -> status
+    this.lastKnownStates = /* @__PURE__ */ new Map();
+    // taskId -> "status:executing" combined state
     this.taskProjectMap = /* @__PURE__ */ new Map();
     // taskId -> projectId (for cleanup)
     this.debug = false;
@@ -1200,7 +1201,7 @@ var VKStatusPoller = class {
    */
   untrackTask(taskId) {
     this.activeTaskIds.delete(taskId);
-    this.lastKnownStatuses.delete(taskId);
+    this.lastKnownStates.delete(taskId);
     this.taskProjectMap.delete(taskId);
   }
   /**
@@ -1208,12 +1209,13 @@ var VKStatusPoller = class {
    */
   cleanupTerminalTasks() {
     const terminalStatuses = /* @__PURE__ */ new Set(["done", "cancelled", "deleted"]);
-    for (const [taskId, status] of this.lastKnownStatuses.entries()) {
+    for (const [taskId, state] of this.lastKnownStates.entries()) {
+      const status = state.split(":")[0];
       if (terminalStatuses.has(status) && !this.activeTaskIds.has(taskId)) {
-        this.lastKnownStatuses.delete(taskId);
+        this.lastKnownStates.delete(taskId);
         this.taskProjectMap.delete(taskId);
         if (this.debug) {
-          console.log("[KanDo] Cleaned up terminal task:", taskId, status);
+          console.log("[KanDo] Cleaned up terminal task:", taskId, state);
         }
       }
     }
@@ -1244,7 +1246,7 @@ var VKStatusPoller = class {
           const currentTaskIds = new Set(tasks.map((t) => t.id));
           for (const [taskId, taskProjectId] of this.taskProjectMap.entries()) {
             if (taskProjectId === projectId && !currentTaskIds.has(taskId)) {
-              const lastStatus = this.lastKnownStatuses.get(taskId);
+              const lastStatus = this.lastKnownStates.get(taskId);
               if (lastStatus && lastStatus !== "deleted") {
                 if (this.debug) {
                   console.log("[KanDo] Task deleted:", taskId);
@@ -1266,34 +1268,35 @@ var VKStatusPoller = class {
                     executor: null
                   });
                 }
-                this.lastKnownStatuses.delete(taskId);
+                this.lastKnownStates.delete(taskId);
                 this.taskProjectMap.delete(taskId);
               }
             }
           }
           for (const task of tasks) {
-            const lastStatus = this.lastKnownStatuses.get(task.id);
-            if (lastStatus !== void 0 && lastStatus !== task.status) {
+            const currentState = `${task.status}:${task.has_in_progress_attempt}`;
+            const lastState = this.lastKnownStates.get(task.id);
+            if (lastState !== void 0 && lastState !== currentState) {
               if (this.debug) {
-                console.log("[KanDo] Task status changed:", task.id, lastStatus, "->", task.status);
+                console.log("[KanDo] Task state changed:", task.id, lastState, "->", currentState);
               }
               if (this.onTaskUpdate) {
                 this.onTaskUpdate(task);
               }
             }
-            this.lastKnownStatuses.set(task.id, task.status);
+            this.lastKnownStates.set(task.id, currentState);
             this.taskProjectMap.set(task.id, projectId);
           }
           this.cleanupTerminalTasks();
-          if (this.lastKnownStatuses.size > this.maxTrackedTasks) {
-            const entriesToRemove = this.lastKnownStatuses.size - this.maxTrackedTasks;
-            const iterator = this.lastKnownStatuses.keys();
+          if (this.lastKnownStates.size > this.maxTrackedTasks) {
+            const entriesToRemove = this.lastKnownStates.size - this.maxTrackedTasks;
+            const iterator = this.lastKnownStates.keys();
             let removed = 0;
             for (const key of iterator) {
               if (removed >= entriesToRemove)
                 break;
               if (!this.activeTaskIds.has(key)) {
-                this.lastKnownStatuses.delete(key);
+                this.lastKnownStates.delete(key);
                 this.taskProjectMap.delete(key);
                 removed++;
               }
@@ -1330,7 +1333,7 @@ var VKStatusPoller = class {
       window.clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
-    this.lastKnownStatuses.clear();
+    this.lastKnownStates.clear();
     this.taskProjectMap.clear();
     this.projectIds.clear();
     this.activeTaskIds.clear();
@@ -1340,9 +1343,9 @@ var VKStatusPoller = class {
   isRunning() {
     return this.isPolling;
   }
-  // Initialize known statuses without triggering updates
-  setKnownStatus(taskId, status) {
-    this.lastKnownStatuses.set(taskId, status);
+  // Initialize known state without triggering updates
+  setKnownState(taskId, status, executing = false) {
+    this.lastKnownStates.set(taskId, `${status}:${executing}`);
   }
 };
 
@@ -1552,13 +1555,13 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       this.createStatusBarItem();
     }
     this.addCommand({
-      id: "push-story",
+      id: "push-card",
       name: "Push Feature",
       checkCallback: (checking) => {
         const file = this.getActiveFile();
-        if (file && this.isInStoriesFolder(file)) {
+        if (file && this.isInCardsFolder(file)) {
           if (!checking) {
-            this.pushStory(file);
+            this.pushCard(file);
           }
           return true;
         }
@@ -1566,13 +1569,13 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       }
     });
     this.addCommand({
-      id: "execute-story",
+      id: "execute-card",
       name: "Add and Execute",
       checkCallback: (checking) => {
         const file = this.getActiveFile();
-        if (file && this.isInStoriesFolder(file)) {
+        if (file && this.isInCardsFolder(file)) {
           if (!checking) {
-            this.executeStory(file);
+            this.executeCard(file);
           }
           return true;
         }
@@ -1584,7 +1587,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       name: "Pull Status",
       checkCallback: (checking) => {
         const file = this.getActiveFile();
-        if (file && this.isInStoriesFolder(file)) {
+        if (file && this.isInCardsFolder(file)) {
           if (!checking) {
             this.pullStatus(file);
           }
@@ -1598,7 +1601,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       name: "View in Vibe Kanban",
       checkCallback: (checking) => {
         const file = this.getActiveFile();
-        if (file && this.isInStoriesFolder(file)) {
+        if (file && this.isInCardsFolder(file)) {
           if (!checking) {
             this.openInVK(file);
           }
@@ -1608,10 +1611,10 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       }
     });
     this.addCommand({
-      id: "create-story",
+      id: "create-card",
       name: "Create New Feature",
       callback: () => {
-        this.createNewStory();
+        this.createNewCard();
       }
     });
     this.addSettingTab(new VKSettingTab(this.app, this));
@@ -1636,7 +1639,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     );
     this.registerEvent(
       this.app.metadataCache.on("changed", (file) => {
-        if (file instanceof import_obsidian9.TFile && this.isInStoriesFolder(file)) {
+        if (file instanceof import_obsidian9.TFile && this.isInCardsFolder(file)) {
           this.updateStatusBar(file);
           this.updateToolbarForFile(file);
         }
@@ -1669,7 +1672,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
         if (file instanceof import_obsidian9.TFolder) {
           menu.addItem((item) => {
             item.setTitle("New KanDo card").setIcon("list-plus").onClick(() => {
-              this.createNewStory(file.path);
+              this.createNewCard(file.path);
             });
           });
         }
@@ -1682,10 +1685,10 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
         if (this.filesBeingUpdated.has(file.path)) {
           return;
         }
-        if (this.settings.autoPushOnSave && this.isInStoriesFolder(file)) {
+        if (this.settings.autoPushOnSave && this.isInCardsFolder(file)) {
           const isSynced = await this.frontmatter.isSynced(file);
           if (isSynced) {
-            await this.pushStoryQuiet(file);
+            await this.pushCardQuiet(file);
           }
         }
       })
@@ -1798,7 +1801,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     button.setAttribute("aria-label", "New KanDo card");
     (0, import_obsidian9.setIcon)(button, "kanban-plus");
     this.registerDomEvent(button, "click", () => {
-      this.createNewStory();
+      this.createNewCard();
     });
     navContainer.appendChild(button);
     this.fileExplorerButton = button;
@@ -1827,14 +1830,16 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       add.removeClass("vk-hidden", "vk-disabled");
       execute.removeClass("vk-hidden", "vk-disabled", "vk-executing");
       open.removeClass("vk-hidden", "vk-disabled");
-      if (!this.isInStoriesFolder(file)) {
+      if (!this.isInCardsFolder(file)) {
         add.addClass("vk-hidden");
         execute.addClass("vk-hidden");
         open.addClass("vk-hidden");
         continue;
       }
       const isSynced = await this.frontmatter.isSynced(file);
-      const status = isSynced ? await this.frontmatter.getStatus(file) : null;
+      const fm = isSynced ? await this.frontmatter.read(file) : null;
+      const status = (fm == null ? void 0 : fm.vk_status) || null;
+      const isExecuting = (fm == null ? void 0 : fm.vk_executing) === true;
       if (!isSynced) {
         (0, import_obsidian9.setIcon)(add, "kanban-upload");
         add.setAttribute("aria-label", "Push to To Do");
@@ -1843,15 +1848,15 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       } else {
         (0, import_obsidian9.setIcon)(add, "refresh-cw");
         add.setAttribute("aria-label", "Push changes");
-        if (status === "inprogress") {
+        if (isExecuting) {
           execute.addClass("vk-executing", "vk-disabled");
           execute.setAttribute("aria-label", "Executing...");
           add.addClass("vk-hidden");
-          open.setAttribute("aria-label", "View Diffs");
+          open.setAttribute("aria-label", "View Task");
         } else if (status === "inreview" || status === "done") {
           execute.addClass("vk-hidden");
           add.addClass("vk-hidden");
-          open.setAttribute("aria-label", "View Diffs");
+          open.setAttribute("aria-label", "View Task");
         } else {
           execute.setAttribute("aria-label", "Add and Execute");
           open.setAttribute("aria-label", "View in Vibe Kanban");
@@ -1861,15 +1866,15 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
   }
   // Handler for Push to To Do button
   async handleAddClick(file) {
-    if (!this.isInStoriesFolder(file)) {
+    if (!this.isInCardsFolder(file)) {
       new import_obsidian9.Notice("Not a card file");
       return;
     }
-    await this.pushStory(file);
+    await this.pushCard(file);
   }
   // Handler for Execute button
   async handleExecuteClick(file) {
-    if (!this.isInStoriesFolder(file)) {
+    if (!this.isInCardsFolder(file)) {
       new import_obsidian9.Notice("Not a card file");
       return;
     }
@@ -1879,16 +1884,16 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       return;
     }
     if (!isSynced) {
-      await this.pushStoryWithCallback(file, async () => {
-        await this.executeStory(file);
+      await this.pushCardWithCallback(file, async () => {
+        await this.executeCard(file);
       });
     } else {
-      await this.executeStory(file);
+      await this.executeCard(file);
     }
   }
   // Handler for Open in VK button
   async handleOpenClick(file) {
-    if (!this.isInStoriesFolder(file)) {
+    if (!this.isInCardsFolder(file)) {
       new import_obsidian9.Notice("Not a card file");
       return;
     }
@@ -1968,13 +1973,14 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       const file = this.app.vault.getAbstractFileByPath(filePath);
       if (file instanceof import_obsidian9.TFile) {
         const promise = this.frontmatter.read(file).then((fm) => {
+          var _a;
           if (fm.vk_project_id) {
             projectIds.add(fm.vk_project_id);
           }
           if (this.statusPoller) {
             this.statusPoller.trackTask(taskId);
             if (fm.vk_status) {
-              this.statusPoller.setKnownStatus(taskId, fm.vk_status);
+              this.statusPoller.setKnownState(taskId, fm.vk_status, (_a = fm.vk_executing) != null ? _a : false);
             }
           }
         });
@@ -2010,6 +2016,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     try {
       await this.frontmatter.update(file, {
         vk_status: task.status,
+        vk_executing: task.has_in_progress_attempt,
         vk_last_synced: new Date().toISOString()
       });
       await this.updateStatusBar(file);
@@ -2033,7 +2040,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     this.taskIdToFileIndex.clear();
     const files = this.app.vault.getMarkdownFiles();
     for (const file of files) {
-      if (!this.isInStoriesFolder(file)) {
+      if (!this.isInCardsFolder(file)) {
         continue;
       }
       try {
@@ -2059,12 +2066,12 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
     return (view == null ? void 0 : view.file) || null;
   }
-  isInStoriesFolder(file) {
+  isInCardsFolder(file) {
     var _a;
-    if (!this.settings.storiesFolder) {
+    if (!this.settings.cardsFolder) {
       return true;
     }
-    const folder = this.settings.storiesFolder.replace(/^\/|\/$/g, "");
+    const folder = this.settings.cardsFolder.replace(/^\/|\/$/g, "");
     if (!folder) {
       return true;
     }
@@ -2078,7 +2085,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     const textEl = this.statusBarItem.querySelector(".vk-status-bar-text");
     if (!textEl)
       return;
-    if (!this.isInStoriesFolder(file)) {
+    if (!this.isInCardsFolder(file)) {
       textEl.textContent = "\u2014";
       this.statusBarItem.className = "vk-status-bar";
       return;
@@ -2121,7 +2128,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     const menu = new import_obsidian9.Menu();
     menu.addItem(
       (item) => item.setTitle("New KanDo card").setIcon("list-plus").onClick(() => {
-        this.createNewStory();
+        this.createNewCard();
       })
     );
     menu.addItem(
@@ -2132,17 +2139,17 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     );
     menu.showAtMouseEvent(evt);
   }
-  async pushStory(file) {
-    await this.pushStoryWithCallback(file);
+  async pushCard(file) {
+    await this.pushCardWithCallback(file);
   }
-  // Push story with optional callback (used for chained push+execute)
-  async pushStoryWithCallback(file, onComplete) {
+  // Push card with optional callback (used for chained push+execute)
+  async pushCardWithCallback(file, onComplete) {
     var _a;
     try {
       const isSynced = await this.frontmatter.isSynced(file);
       const title = await this.frontmatter.getTitle(file);
       if (isSynced) {
-        await this.pushStoryQuiet(file);
+        await this.pushCardQuiet(file);
         new import_obsidian9.Notice("Card updated in Vibe Kanban");
         if (onComplete) {
           try {
@@ -2229,7 +2236,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       new import_obsidian9.Notice(`Failed to push: ${message}`);
     }
   }
-  async pushStoryQuiet(file) {
+  async pushCardQuiet(file) {
     const fm = await this.frontmatter.read(file);
     if (!fm.vk_task_id)
       return;
@@ -2243,7 +2250,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       vk_last_synced: new Date().toISOString()
     });
   }
-  async executeStory(file) {
+  async executeCard(file) {
     var _a;
     try {
       let fm = await this.frontmatter.read(file);
@@ -2277,7 +2284,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
         new import_obsidian9.Notice("Card not properly synced");
         return;
       }
-      await this.pushStoryQuiet(file);
+      await this.pushCardQuiet(file);
       const title = await this.frontmatter.getTitle(file);
       let branches = [];
       let executorOptions = [];
@@ -2321,12 +2328,14 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
             file,
             "inprogress",
             attempt.id,
-            attempt.branch
+            attempt.branch,
+            true
+            // executing
           );
           await this.updateStatusBar(file);
           if (taskId && projectId) {
             if (this.statusPoller) {
-              this.statusPoller.setKnownStatus(taskId, "inprogress");
+              this.statusPoller.setKnownState(taskId, "inprogress", true);
               this.statusPoller.addProject(projectId);
             } else if (this.settings.autoSyncStatus) {
               await this.updateWebSocketConnection();
@@ -2345,7 +2354,7 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
       new import_obsidian9.Notice("No file open");
       return;
     }
-    if (!this.isInStoriesFolder(targetFile)) {
+    if (!this.isInCardsFolder(targetFile)) {
       new import_obsidian9.Notice("Not a card file");
       return;
     }
@@ -2371,7 +2380,8 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
         targetFile,
         task.status,
         latestAttempt == null ? void 0 : latestAttempt.id,
-        latestAttempt == null ? void 0 : latestAttempt.branch
+        latestAttempt == null ? void 0 : latestAttempt.branch,
+        task.has_in_progress_attempt
       );
       await this.updateStatusBar(targetFile);
       new StatusModal(
@@ -2392,7 +2402,8 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
             targetFile,
             refreshedTask.status,
             latestAttempt2 == null ? void 0 : latestAttempt2.id,
-            latestAttempt2 == null ? void 0 : latestAttempt2.branch
+            latestAttempt2 == null ? void 0 : latestAttempt2.branch,
+            refreshedTask.has_in_progress_attempt
           );
           await this.updateStatusBar(targetFile);
           return { task: refreshedTask, attempts: refreshedAttempts };
@@ -2463,10 +2474,10 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     this.app.workspace.revealLeaf(leaf);
   }
   /**
-   * Create a new story file with native template functionality.
-   * @param targetFolder Optional folder path to create the story in
+   * Create a new card file with native template functionality.
+   * @param targetFolder Optional folder path to create the card in
    */
-  async createNewStory(targetFolder) {
+  async createNewCard(targetFolder) {
     try {
       let folder = "";
       if (targetFolder) {
@@ -2485,13 +2496,13 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
           return;
         }
       } else {
-        folder = this.settings.storiesFolder || "";
+        folder = this.settings.cardsFolder || "";
       }
-      const result = await this.showCreateStoryModal("Untitled");
+      const result = await this.showCreateCardModal("Untitled");
       if (!result)
         return;
       const filePath = this.generateUniqueFilePath(folder, result.title);
-      const content = this.buildStoryContent(result);
+      const content = this.buildCardContent(result);
       if (folder) {
         const folderExists = this.app.vault.getAbstractFileByPath(folder);
         if (!folderExists) {
@@ -2529,9 +2540,9 @@ var VibeKanbanPlugin = class extends import_obsidian9.Plugin {
     return filePath;
   }
   /**
-   * Build the markdown content for a new story file.
+   * Build the markdown content for a new card file.
    */
-  buildStoryContent(result) {
+  buildCardContent(result) {
     const frontmatter = `---
 title: ${result.title}
 vk_status: notsynced
@@ -2546,17 +2557,17 @@ ${body}
   }
   /**
    * Public API for Templater integration.
-   * Shows a single modal to create a new story with project, title, and description.
+   * Shows a single modal to create a new card with project, title, and description.
    * Returns null if cancelled.
    */
-  async showCreateStoryModal(defaultTitle = "Untitled") {
+  async showCreateCardModal(defaultTitle = "Untitled") {
     try {
       const projects = await this.api.getProjects();
       if (projects.length === 0) {
         new import_obsidian9.Notice("No projects found in Vibe Kanban");
         return null;
       }
-      const modal = new CreateStoryModal(
+      const modal = new CreateCardModal(
         this.app,
         projects,
         this.settings.defaultProjectId,
