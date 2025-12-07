@@ -124,6 +124,7 @@ export interface VKFrontmatter {
 	vk_project_id?: string;
 	vk_task_id?: string;
 	vk_status?: VKTaskStatus;
+	vk_executing?: boolean; // True when has_in_progress_attempt is true
 	vk_last_synced?: string;
 	vk_attempt_id?: string;
 	vk_branch?: string;

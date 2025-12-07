@@ -430,7 +430,9 @@ export default class VibeKanbanPlugin extends Plugin {
 			}
 
 			const isSynced = await this.frontmatter.isSynced(file);
-			const status = isSynced ? await this.frontmatter.getStatus(file) : null;
+			const fm = isSynced ? await this.frontmatter.read(file) : null;
+			const status = fm?.vk_status || null;
+			const isExecuting = fm?.vk_executing === true;
 
 			if (!isSynced) {
 				// Unsynced: Show Add (upload icon) and Execute, hide Open
@@ -443,19 +445,19 @@ export default class VibeKanbanPlugin extends Plugin {
 				setIcon(add, 'refresh-cw');
 				add.setAttribute('aria-label', 'Push changes');
 
-				if (status === 'inprogress') {
-					// Executing: pulse animation, disable execute, hide sync
+				if (isExecuting) {
+					// Actually executing (has_in_progress_attempt): pulse animation, disable execute, hide sync
 					execute.addClass('vk-executing', 'vk-disabled');
 					execute.setAttribute('aria-label', 'Executing...');
 					add.addClass('vk-hidden'); // Can't sync while executing
 					open.setAttribute('aria-label', 'View Task');
 				} else if (status === 'inreview' || status === 'done') {
-					// Executed: hide execute and sync (can't run again)
+					// Completed: hide execute and sync (can't run again)
 					execute.addClass('vk-hidden');
 					add.addClass('vk-hidden');
 					open.setAttribute('aria-label', 'View Task');
 				} else {
-					// Ready to execute (todo, cancelled)
+					// Ready to execute (todo, inprogress without execution, cancelled)
 					execute.setAttribute('aria-label', 'Add and Execute');
 					open.setAttribute('aria-label', 'View in Vibe Kanban');
 				}
@@ -607,11 +609,11 @@ export default class VibeKanbanPlugin extends Plugin {
 					if (fm.vk_project_id) {
 						projectIds.add(fm.vk_project_id);
 					}
-					// Set known status and track task
+					// Set known state and track task
 					if (this.statusPoller) {
 						this.statusPoller.trackTask(taskId);
 						if (fm.vk_status) {
-							this.statusPoller.setKnownStatus(taskId, fm.vk_status);
+							this.statusPoller.setKnownState(taskId, fm.vk_status, fm.vk_executing ?? false);
 						}
 					}
 				});
@@ -653,11 +655,12 @@ export default class VibeKanbanPlugin extends Plugin {
 		const file = this.app.vault.getAbstractFileByPath(filePath);
 		if (!(file instanceof TFile)) return;
 
-		// Update frontmatter with new status (mark as programmatic update)
+		// Update frontmatter with new status and execution state (mark as programmatic update)
 		this.filesBeingUpdated.add(file.path);
 		try {
 			await this.frontmatter.update(file, {
 				vk_status: task.status,
+				vk_executing: task.has_in_progress_attempt,
 				vk_last_synced: new Date().toISOString(),
 			});
 
@@ -1059,7 +1062,7 @@ export default class VibeKanbanPlugin extends Plugin {
 					// Ensure poller tracks this task and project
 					if (taskId && projectId) {
 						if (this.statusPoller) {
-							this.statusPoller.setKnownStatus(taskId, 'inprogress');
+							this.statusPoller.setKnownState(taskId, 'inprogress', true);
 							this.statusPoller.addProject(projectId);
 						} else if (this.settings.autoSyncStatus) {
 							// Start poller if not running

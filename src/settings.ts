@@ -34,13 +34,22 @@ export class VKSettingTab extends PluginSettingTab {
 		wrapper.createEl('h1', { text: 'KanDo', cls: 'vk-main-title' });
 		wrapper.createEl('p', { text: 'Think. Plan. Do.', cls: 'vk-tagline' });
 
-		// Load data for dropdowns with error handling
-		try {
-			await this.loadProjects();
-			await this.loadProfiles();
-		} catch (error) {
-			// Show error but continue rendering with fallback data
-			console.error('[KanDo] Error loading settings data:', error);
+		// Reset connection status on each display - will be set by loadProjects result
+		this.lastConnectionStatus = null;
+
+		// Load data for dropdowns and determine connection status
+		if (this.plugin.settings.vkUrl) {
+			try {
+				await this.loadProjects();
+				await this.loadProfiles();
+				// Only mark as connected if we have a URL AND projects loaded
+				if (this.projects.length > 0) {
+					this.lastConnectionStatus = 'connected';
+				}
+			} catch (error) {
+				console.error('[KanDo] Error loading settings data:', error);
+				this.lastConnectionStatus = 'disconnected';
+			}
 		}
 		const folders = this.getFolders();
 
@@ -70,26 +79,16 @@ export class VKSettingTab extends PluginSettingTab {
 		// Status Icon inside input
 		const statusIcon = inputWrapper.createSpan({ cls: 'vk-status-icon-input' });
 
-		// Show current connection status (only after actual test)
+		// Show current connection status (only after actual API test)
+		// Don't show any status icon until we've actually tested the connection
 		if (this.lastConnectionStatus === 'connected') {
 			setIcon(statusIcon, 'check');
 			statusIcon.addClass('connected');
 		} else if (this.lastConnectionStatus === 'disconnected') {
 			setIcon(statusIcon, 'x');
 			statusIcon.addClass('disconnected');
-		} else if (this.plugin.settings.vkUrl) {
-			// Has URL but hasn't been tested yet - test on initial load
-			if (!this.projectsLoadFailed && this.projects.length > 0) {
-				setIcon(statusIcon, 'check');
-				statusIcon.addClass('connected');
-				this.lastConnectionStatus = 'connected';
-			} else if (this.projectsLoadFailed) {
-				setIcon(statusIcon, 'x');
-				statusIcon.addClass('disconnected');
-				this.lastConnectionStatus = 'disconnected';
-			}
-			// If no URL or projects not loaded yet, show no icon
 		}
+		// No icon shown for untested URLs - user must enter/change URL to trigger test
 
 		// Debounced auto-test on URL change
 		urlInput.addEventListener('input', async () => {

@@ -105,7 +105,7 @@ export class CreateCardModal extends Modal {
 
 		const textAreaContainer = contentEl.createDiv({ cls: 'vk-textarea-container' });
 		const textArea = new TextAreaComponent(textAreaContainer);
-		textArea.setPlaceholder('Describe the feature here...');
+		textArea.setPlaceholder('Prompt details here...');
 		textArea.onChange((value) => {
 			this.description = value;
 		});

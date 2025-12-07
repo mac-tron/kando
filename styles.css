@@ -400,17 +400,24 @@
 }
 
 /* Modal Styles */
-.vk-create-story-modal {
-	padding: 16px;
+.modal:has(.vk-create-card-modal) .modal-content {
+	width: 500px;
+	max-width: 90vw;
 }
 
-.vk-create-story-modal h2 {
+.vk-create-card-modal {
+	padding: 16px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.vk-create-card-modal h2 {
 	margin: 0 0 16px 0;
 	font-size: 1.4em;
 	font-weight: 600;
 }
 
-.vk-create-story-modal .setting-item {
+.vk-create-card-modal .setting-item {
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 6px;
@@ -418,43 +425,46 @@
 	padding: 8px 0;
 }
 
-.vk-create-story-modal .setting-item-info {
+.vk-create-card-modal .setting-item-info {
 	padding-right: 0;
 }
 
-.vk-create-story-modal .setting-item-name {
+.vk-create-card-modal .setting-item-name {
 	font-size: 0.9em;
 	font-weight: 500;
 }
 
-.vk-create-story-modal .setting-item-description {
+.vk-create-card-modal .setting-item-description {
 	font-size: 0.8em;
 	color: var(--text-muted);
 }
 
-.vk-create-story-modal .setting-item-control {
+.vk-create-card-modal .setting-item-control {
 	width: 100%;
 	justify-content: flex-start;
 }
 
-.vk-create-story-modal .setting-item-control input[type="text"],
-.vk-create-story-modal .setting-item-control select,
-.vk-create-story-modal .setting-item-control .dropdown {
+.vk-create-card-modal .setting-item-control input[type="text"],
+.vk-create-card-modal .setting-item-control select,
+.vk-create-card-modal .setting-item-control .dropdown {
 	width: 100%;
+	box-sizing: border-box;
 }
 
-.vk-create-story-modal .vk-textarea-container {
+.vk-create-card-modal .vk-textarea-container {
 	width: 100%;
 	margin-bottom: 16px;
+	box-sizing: border-box;
 }
 
-.vk-create-story-modal .vk-description-textarea {
+.vk-create-card-modal .vk-description-textarea {
 	width: 100%;
 	min-height: 120px;
 	resize: vertical;
+	box-sizing: border-box;
 }
 
-.vk-create-story-modal .modal-button-container {
+.vk-create-card-modal .modal-button-container {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;

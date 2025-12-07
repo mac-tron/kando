@@ -19,7 +19,7 @@ export class VKStatusPoller {
 	private onTaskUpdate: TaskUpdateCallback | null = null;
 	private vkUrl: string = '';
 	private projectIds: Set<string> = new Set();
-	private lastKnownStatuses: Map<string, string> = new Map(); // taskId -> status
+	private lastKnownStates: Map<string, string> = new Map(); // taskId -> "status:executing" combined state
 	private taskProjectMap: Map<string, string> = new Map(); // taskId -> projectId (for cleanup)
 	private debug: boolean = false;
 	private maxTrackedTasks = 1000; // Prevent unbounded memory growth
@@ -76,7 +76,7 @@ export class VKStatusPoller {
 	untrackTask(taskId: string): void {
 		this.activeTaskIds.delete(taskId);
 		// Also clean up from status maps
-		this.lastKnownStatuses.delete(taskId);
+		this.lastKnownStates.delete(taskId);
 		this.taskProjectMap.delete(taskId);
 	}
 
@@ -85,13 +85,15 @@ export class VKStatusPoller {
 	 */
 	private cleanupTerminalTasks(): void {
 		const terminalStatuses = new Set(['done', 'cancelled', 'deleted']);
-		for (const [taskId, status] of this.lastKnownStatuses.entries()) {
+		for (const [taskId, state] of this.lastKnownStates.entries()) {
+			// Extract status from combined state "status:executing"
+			const status = state.split(':')[0];
 			// Only clean up terminal tasks that are not actively tracked by files
 			if (terminalStatuses.has(status) && !this.activeTaskIds.has(taskId)) {
-				this.lastKnownStatuses.delete(taskId);
+				this.lastKnownStates.delete(taskId);
 				this.taskProjectMap.delete(taskId);
 				if (this.debug) {
-					console.log('[KanDo] Cleaned up terminal task:', taskId, status);
+					console.log('[KanDo] Cleaned up terminal task:', taskId, state);
 				}
 			}
 		}
@@ -133,7 +135,7 @@ export class VKStatusPoller {
 					// Check for deleted tasks (tracked tasks no longer in response)
 					for (const [taskId, taskProjectId] of this.taskProjectMap.entries()) {
 						if (taskProjectId === projectId && !currentTaskIds.has(taskId)) {
-							const lastStatus = this.lastKnownStatuses.get(taskId);
+							const lastStatus = this.lastKnownStates.get(taskId);
 							if (lastStatus && lastStatus !== 'deleted') {
 								if (this.debug) {
 									console.log('[KanDo] Task deleted:', taskId);
@@ -157,28 +159,30 @@ export class VKStatusPoller {
 									});
 								}
 								// Clean up tracking
-								this.lastKnownStatuses.delete(taskId);
+								this.lastKnownStates.delete(taskId);
 								this.taskProjectMap.delete(taskId);
 							}
 						}
 					}
 
-					// Check for status changes on existing tasks
+					// Check for status or execution state changes on existing tasks
 					for (const task of tasks) {
-						const lastStatus = this.lastKnownStatuses.get(task.id);
+						// Create combined state key: "status:executing"
+						const currentState = `${task.status}:${task.has_in_progress_attempt}`;
+						const lastState = this.lastKnownStates.get(task.id);
 
-						// If status changed (and we've seen this task before)
-						if (lastStatus !== undefined && lastStatus !== task.status) {
+						// If state changed (and we've seen this task before)
+						if (lastState !== undefined && lastState !== currentState) {
 							if (this.debug) {
-								console.log('[KanDo] Task status changed:', task.id, lastStatus, '->', task.status);
+								console.log('[KanDo] Task state changed:', task.id, lastState, '->', currentState);
 							}
 							if (this.onTaskUpdate) {
 								this.onTaskUpdate(task);
 							}
 						}
 
-						// Track the task
-						this.lastKnownStatuses.set(task.id, task.status);
+						// Track the task with combined state
+						this.lastKnownStates.set(task.id, currentState);
 						this.taskProjectMap.set(task.id, projectId);
 					}
 
@@ -186,15 +190,15 @@ export class VKStatusPoller {
 					this.cleanupTerminalTasks();
 
 					// Prevent unbounded growth - remove oldest non-active entries if over limit
-					if (this.lastKnownStatuses.size > this.maxTrackedTasks) {
-						const entriesToRemove = this.lastKnownStatuses.size - this.maxTrackedTasks;
-						const iterator = this.lastKnownStatuses.keys();
+					if (this.lastKnownStates.size > this.maxTrackedTasks) {
+						const entriesToRemove = this.lastKnownStates.size - this.maxTrackedTasks;
+						const iterator = this.lastKnownStates.keys();
 						let removed = 0;
 						for (const key of iterator) {
 							if (removed >= entriesToRemove) break;
 							// Only remove if not actively tracked
 							if (!this.activeTaskIds.has(key)) {
-								this.lastKnownStatuses.delete(key);
+								this.lastKnownStates.delete(key);
 								this.taskProjectMap.delete(key);
 								removed++;
 							}
@@ -238,7 +242,7 @@ export class VKStatusPoller {
 			this.pollTimer = null;
 		}
 
-		this.lastKnownStatuses.clear();
+		this.lastKnownStates.clear();
 		this.taskProjectMap.clear();
 		this.projectIds.clear();
 		this.activeTaskIds.clear();
@@ -250,8 +254,8 @@ export class VKStatusPoller {
 		return this.isPolling;
 	}
 
-	// Initialize known statuses without triggering updates
-	setKnownStatus(taskId: string, status: string): void {
-		this.lastKnownStatuses.set(taskId, status);
+	// Initialize known state without triggering updates
+	setKnownState(taskId: string, status: string, executing: boolean = false): void {
+		this.lastKnownStates.set(taskId, `${status}:${executing}`);
 	}
 }
